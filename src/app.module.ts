@@ -9,6 +9,7 @@ import {
   mailConfig,
   envValidationSchema,
 } from './config';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import {
         abortEarly: false,
       },
     }),
+    HealthModule,
   ],
 })
 export class AppModule {}
