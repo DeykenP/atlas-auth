@@ -1,0 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Core identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id                  String    @id @default(uuid()) @db.Uuid
+  email               String    @unique
+  passwordHash        String    @map("password_hash")
+  firstName           String?   @map("first_name")
+  lastName            String?   @map("last_name")
+  avatarUrl           String?   @map("avatar_url")
+  isEmailVerified     Boolean   @default(false) @map("is_email_verified")
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+  lastLoginAt         DateTime? @map("last_login_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  deletedAt           DateTime? @map("deleted_at")
+
+  userRoles               UserRole[]
+  refreshTokens           RefreshToken[]
+  sessions                Session[]
+  devices                 Device[]
+  loginHistory            LoginHistory[]
+  auditLogs               AuditLog[]
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
+
+  @@index([deletedAt])
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// RBAC + permission-based authorization
+// ---------------------------------------------------------------------------
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String   @map("role_id") @db.Uuid
+  permissionId String   @map("permission_id") @db.Uuid
+  assignedAt   DateTime @default(now()) @map("assigned_at")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId     String   @map("user_id") @db.Uuid
+  roleId     String   @map("role_id") @db.Uuid
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+// ---------------------------------------------------------------------------
+// Sessions, devices, refresh tokens
+// ---------------------------------------------------------------------------
+
+model Device {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  fingerprint String
+  name        String?
+  userAgent   String?  @map("user_agent")
+  ipAddress   String?  @map("ip_address")
+  lastSeenAt  DateTime @default(now()) @map("last_seen_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions Session[]
+
+  @@unique([userId, fingerprint])
+  @@map("devices")
+}
+
+model Session {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  deviceId     String?   @map("device_id") @db.Uuid
+  ipAddress    String?   @map("ip_address")
+  userAgent    String?   @map("user_agent")
+  isRevoked    Boolean   @default(false) @map("is_revoked")
+  revokedAt    DateTime? @map("revoked_at")
+  lastActiveAt DateTime  @default(now()) @map("last_active_at")
+  expiresAt    DateTime  @map("expires_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device        Device?        @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  refreshTokens RefreshToken[]
+
+  @@index([userId])
+  @@index([deviceId])
+  @@map("sessions")
+}
+
+model RefreshToken {
+  id                  String    @id @default(uuid()) @db.Uuid
+  userId              String    @map("user_id") @db.Uuid
+  sessionId           String    @map("session_id") @db.Uuid
+  familyId            String    @map("family_id") @db.Uuid
+  tokenHash           String    @unique @map("token_hash")
+  replacedByTokenHash String?   @map("replaced_by_token_hash")
+  expiresAt           DateTime  @map("expires_at")
+  revokedAt           DateTime? @map("revoked_at")
+  createdByIp         String?   @map("created_by_ip")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Email verification / password reset
+// ---------------------------------------------------------------------------
+
+enum EmailTokenType {
+  REGISTRATION
+  EMAIL_CHANGE
+}
+
+model EmailVerificationToken {
+  id         String         @id @default(uuid()) @db.Uuid
+  userId     String         @map("user_id") @db.Uuid
+  tokenHash  String         @unique @map("token_hash")
+  type       EmailTokenType
+  newEmail   String?        @map("new_email")
+  expiresAt  DateTime       @map("expires_at")
+  consumedAt DateTime?      @map("consumed_at")
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+model PasswordResetToken {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  tokenHash     String    @unique @map("token_hash")
+  expiresAt     DateTime  @map("expires_at")
+  consumedAt    DateTime? @map("consumed_at")
+  requestedByIp String?   @map("requested_by_ip")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// History & auditing
+// ---------------------------------------------------------------------------
+
+enum LoginStatus {
+  SUCCESS
+  FAILED_PASSWORD
+  FAILED_LOCKED
+  FAILED_UNVERIFIED
+  FAILED_NOT_FOUND
+}
+
+model LoginHistory {
+  id        String      @id @default(uuid()) @db.Uuid
+  userId    String?     @map("user_id") @db.Uuid
+  email     String
+  ipAddress String?     @map("ip_address")
+  userAgent String?     @map("user_agent")
+  status    LoginStatus
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("login_history")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  action     String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  metadata   Json?
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
