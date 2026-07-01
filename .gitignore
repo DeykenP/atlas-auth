@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+coverage/
+
+# environment
+.env
+.env.*
+!.env.example
+
+# logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+
+# Prisma
+prisma/*.db
+
+# misc
+*.tsbuildinfo
