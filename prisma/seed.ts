@@ -49,6 +49,24 @@ async function main(): Promise<void> {
   );
 
   console.log(`Seeded ${PERMISSIONS.length} permissions and roles "admin" (all permissions), "user" (none).`);
+
+  const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim();
+  if (adminEmail) {
+    const adminUser = await prisma.user.findUnique({ where: { email: adminEmail } });
+    if (!adminUser) {
+      console.warn(
+        `ADMIN_EMAIL is set to "${adminEmail}" but no user with that email exists yet. ` +
+          'Register that account first, then re-run "npx prisma db seed" to grant admin.',
+      );
+    } else {
+      await prisma.userRole.upsert({
+        where: { userId_roleId: { userId: adminUser.id, roleId: adminRole.id } },
+        create: { userId: adminUser.id, roleId: adminRole.id },
+        update: {},
+      });
+      console.log(`Granted "admin" role to ${adminEmail}.`);
+    }
+  }
 }
 
 main()
