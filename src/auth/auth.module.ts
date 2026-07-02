@@ -32,6 +32,6 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     JwtStrategy,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
-  exports: [AuthService, TokenBlacklistService],
+  exports: [AuthService, TokenService, TokenBlacklistService],
 })
 export class AuthModule {}

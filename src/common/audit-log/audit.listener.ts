@@ -9,6 +9,12 @@ import {
   UserLoggedOutEvent,
   UserRegisteredEvent,
 } from '../../auth/events';
+import {
+  ALL_SESSIONS_REVOKED,
+  AllSessionsRevokedEvent,
+  SESSION_REVOKED,
+  SessionRevokedEvent,
+} from '../../sessions/events/session-revoked.event';
 import { AuditLogRepository } from './audit-log.repository';
 import { LoginHistoryRepository } from './login-history.repository';
 
@@ -87,6 +93,30 @@ export class AuditListener {
       action: AuthEventName.TOKEN_REUSE_DETECTED,
       entityType: 'RefreshTokenFamily',
       entityId: event.familyId,
+      ipAddress: event.context.ipAddress,
+      userAgent: event.context.userAgent,
+    });
+  }
+
+  @OnEvent(SESSION_REVOKED)
+  async handleSessionRevoked(event: SessionRevokedEvent): Promise<void> {
+    await this.auditLogRepository.record({
+      userId: event.userId,
+      action: SESSION_REVOKED,
+      entityType: 'Session',
+      entityId: event.sessionId,
+      ipAddress: event.context.ipAddress,
+      userAgent: event.context.userAgent,
+    });
+  }
+
+  @OnEvent(ALL_SESSIONS_REVOKED)
+  async handleAllSessionsRevoked(event: AllSessionsRevokedEvent): Promise<void> {
+    await this.auditLogRepository.record({
+      userId: event.userId,
+      action: ALL_SESSIONS_REVOKED,
+      entityType: 'Session',
+      metadata: { revokedCount: event.revokedCount, keptSessionId: event.keptSessionId },
       ipAddress: event.context.ipAddress,
       userAgent: event.context.userAgent,
     });
