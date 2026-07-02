@@ -17,6 +17,8 @@ import { HashingModule } from './common/hashing/hashing.module';
 import { AuditLogModule } from './common/audit-log/audit-log.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { PermissionsModule } from './permissions/permissions.module';
+import { RolesModule } from './roles/roles.module';
 
 @Module({
   imports: [
@@ -37,6 +39,8 @@ import { AuthModule } from './auth/auth.module';
     HealthModule,
     UsersModule,
     AuthModule,
+    PermissionsModule,
+    RolesModule,
   ],
 })
 export class AppModule {}

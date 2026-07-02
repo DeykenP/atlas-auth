@@ -22,5 +22,6 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "moduleResolution": "node"
-  }
+  },
+  "include": ["src/**/*.ts"]
 }
