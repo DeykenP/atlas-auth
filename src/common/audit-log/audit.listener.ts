@@ -15,6 +15,7 @@ import {
   SESSION_REVOKED,
   SessionRevokedEvent,
 } from '../../sessions/events/session-revoked.event';
+import { EMAIL_VERIFIED, EmailVerifiedEvent } from '../../auth/services/email-verification.service';
 import { AuditLogRepository } from './audit-log.repository';
 import { LoginHistoryRepository } from './login-history.repository';
 
@@ -93,6 +94,19 @@ export class AuditListener {
       action: AuthEventName.TOKEN_REUSE_DETECTED,
       entityType: 'RefreshTokenFamily',
       entityId: event.familyId,
+      ipAddress: event.context.ipAddress,
+      userAgent: event.context.userAgent,
+    });
+  }
+
+  @OnEvent(EMAIL_VERIFIED)
+  async handleEmailVerified(event: EmailVerifiedEvent): Promise<void> {
+    await this.auditLogRepository.record({
+      userId: event.userId,
+      action: EMAIL_VERIFIED,
+      entityType: 'User',
+      entityId: event.userId,
+      metadata: { email: event.email, type: event.type },
       ipAddress: event.context.ipAddress,
       userAgent: event.context.userAgent,
     });

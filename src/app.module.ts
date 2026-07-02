@@ -15,6 +15,7 @@ import { DatabaseModule } from './database/database.module';
 import { RedisModule } from './common/redis/redis.module';
 import { HashingModule } from './common/hashing/hashing.module';
 import { AuditLogModule } from './common/audit-log/audit-log.module';
+import { MailModule } from './mail/mail.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PermissionsModule } from './permissions/permissions.module';
@@ -37,6 +38,7 @@ import { SessionsModule } from './sessions/sessions.module';
     RedisModule,
     HashingModule,
     AuditLogModule,
+    MailModule,
     HealthModule,
     UsersModule,
     AuthModule,

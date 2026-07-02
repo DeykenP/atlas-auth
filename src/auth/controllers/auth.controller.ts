@@ -20,8 +20,10 @@ import { Public } from '../decorators/public.decorator';
 import { AuthResponseDto } from '../dto/auth-response.dto';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
+import { VerifyEmailDto } from '../dto/verify-email.dto';
 import { RequestContext } from '../interfaces/request-context.interface';
 import { AuthService } from '../services/auth.service';
+import { EmailVerificationService } from '../services/email-verification.service';
 
 @ApiTags('auth')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -29,6 +31,7 @@ import { AuthService } from '../services/auth.service';
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
+    private readonly emailVerificationService: EmailVerificationService,
     private readonly config: ConfigService,
   ) {}
 
@@ -92,6 +95,26 @@ export class AuthController {
       tokens.accessToken.expiresAt,
       new UserResponseDto(user),
     );
+  }
+
+  @Public()
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ description: 'Email verified (or email change applied)' })
+  async verifyEmail(
+    @Body() dto: VerifyEmailDto,
+    @Req() req: Request,
+  ): Promise<{ message: string }> {
+    await this.emailVerificationService.verify(dto.token, this.getContext(req));
+    return { message: 'Email verified successfully' };
+  }
+
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOkResponse({ description: 'A fresh verification email has been queued' })
+  async resendVerification(@CurrentUser() user: JwtPayload): Promise<{ message: string }> {
+    await this.emailVerificationService.sendRegistrationVerification(user.sub, user.email);
+    return { message: 'Verification email sent' };
   }
 
   @Post('logout')

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -8,13 +8,16 @@ import { AuthController } from './controllers/auth.controller';
 import { AuthService } from './services/auth.service';
 import { TokenService } from './services/token.service';
 import { TokenBlacklistService } from './services/token-blacklist.service';
+import { EmailVerificationService } from './services/email-verification.service';
 import { AuthRepository } from './repositories/auth.repository';
+import { EmailVerificationRepository } from './repositories/email-verification.repository';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RegistrationListener } from './events/registration.listener';
 
 @Module({
   imports: [
-    UsersModule,
+    forwardRef(() => UsersModule),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       inject: [ConfigService],
@@ -29,9 +32,12 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     AuthRepository,
     TokenService,
     TokenBlacklistService,
+    EmailVerificationService,
+    EmailVerificationRepository,
+    RegistrationListener,
     JwtStrategy,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
-  exports: [AuthService, TokenService, TokenBlacklistService],
+  exports: [AuthService, TokenService, TokenBlacklistService, EmailVerificationService],
 })
 export class AuthModule {}

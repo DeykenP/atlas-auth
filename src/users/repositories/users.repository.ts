@@ -69,6 +69,21 @@ export class UsersRepository {
     });
   }
 
+  updateProfile(
+    id: string,
+    data: { firstName?: string; lastName?: string; avatarUrl?: string },
+  ): Promise<User> {
+    return this.prisma.user.update({ where: { id }, data });
+  }
+
+  /** Applies a confirmed email change; the new address arrives pre-verified. */
+  updateEmail(id: string, email: string): Promise<User> {
+    return this.prisma.user.update({
+      where: { id },
+      data: { email, isEmailVerified: true },
+    });
+  }
+
   updatePassword(id: string, passwordHash: string): Promise<User> {
     return this.prisma.user.update({
       where: { id },
