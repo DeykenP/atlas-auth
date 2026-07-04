@@ -11,6 +11,8 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   const config = app.get(ConfigService);
 
+  app.enableShutdownHooks();
+
   const apiPrefix = config.get<string>('app.apiPrefix') ?? 'api/v1';
   const corsOrigins = config.get<string[]>('app.corsOrigins') ?? [];
   const cookieSecret = config.get<string>('security.cookieSecret');
@@ -18,7 +20,11 @@ async function bootstrap(): Promise<void> {
   app.setGlobalPrefix(apiPrefix);
   app.enableVersioning({ type: VersioningType.URI });
 
-  app.use(helmet());
+  // CSP is aimed at browsers rendering HTML; this service is a JSON API whose
+  // only HTML surface is the dev-only Swagger UI, so a strict default CSP
+  // would just break Swagger's inline scripts for no real security gain.
+  // Every other helmet protection (HSTS, X-Frame-Options, nosniff, ...) stays on.
+  app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cookieParser(cookieSecret));
 
   app.enableCors({

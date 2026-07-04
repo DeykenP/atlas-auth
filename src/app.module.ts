@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import {
   appConfig,
   databaseConfig,
@@ -15,6 +17,7 @@ import { DatabaseModule } from './database/database.module';
 import { RedisModule } from './common/redis/redis.module';
 import { HashingModule } from './common/hashing/hashing.module';
 import { AuditLogModule } from './common/audit-log/audit-log.module';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { MailModule } from './mail/mail.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
@@ -34,6 +37,17 @@ import { SessionsModule } from './sessions/sessions.module';
       },
     }),
     EventEmitterModule.forRoot(),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        throttlers: [
+          {
+            ttl: config.getOrThrow<number>('security.throttle.ttlSeconds') * 1000,
+            limit: config.getOrThrow<number>('security.throttle.limit'),
+          },
+        ],
+      }),
+    }),
     DatabaseModule,
     RedisModule,
     HashingModule,
@@ -45,6 +59,10 @@ import { SessionsModule } from './sessions/sessions.module';
     PermissionsModule,
     RolesModule,
     SessionsModule,
+  ],
+  providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_FILTER, useClass: GlobalExceptionFilter },
   ],
 })
 export class AppModule {}

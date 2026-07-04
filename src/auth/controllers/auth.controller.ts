@@ -11,6 +11,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import { ApiCookieAuth, ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import type { CookieOptions, Request, Response } from 'express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -28,6 +29,7 @@ import { RequestContext } from '../interfaces/request-context.interface';
 import { AuthService } from '../services/auth.service';
 import { EmailVerificationService } from '../services/email-verification.service';
 import { PasswordService } from '../services/password.service';
+import { BRUTE_FORCE_THROTTLE } from '../constants/brute-force-throttle.constant';
 
 @ApiTags('auth')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -41,6 +43,7 @@ export class AuthController {
   ) {}
 
   @Public()
+  @Throttle(BRUTE_FORCE_THROTTLE)
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiCreatedResponse({ type: AuthResponseDto })
@@ -59,6 +62,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle(BRUTE_FORCE_THROTTLE)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthResponseDto })
@@ -123,6 +127,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle(BRUTE_FORCE_THROTTLE)
   @Post('forgot-password')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOkResponse({ description: 'If the email exists, a reset link has been sent' })
@@ -132,6 +137,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle(BRUTE_FORCE_THROTTLE)
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ description: 'Password reset; all sessions have been revoked' })
