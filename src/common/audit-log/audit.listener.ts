@@ -16,6 +16,7 @@ import {
   SessionRevokedEvent,
 } from '../../sessions/events/session-revoked.event';
 import { EMAIL_VERIFIED, EmailVerifiedEvent } from '../../auth/services/email-verification.service';
+import { PASSWORD_CHANGED, PasswordChangedEvent } from '../../auth/events/password-changed.event';
 import { AuditLogRepository } from './audit-log.repository';
 import { LoginHistoryRepository } from './login-history.repository';
 
@@ -107,6 +108,19 @@ export class AuditListener {
       entityType: 'User',
       entityId: event.userId,
       metadata: { email: event.email, type: event.type },
+      ipAddress: event.context.ipAddress,
+      userAgent: event.context.userAgent,
+    });
+  }
+
+  @OnEvent(PASSWORD_CHANGED)
+  async handlePasswordChanged(event: PasswordChangedEvent): Promise<void> {
+    await this.auditLogRepository.record({
+      userId: event.userId,
+      action: PASSWORD_CHANGED,
+      entityType: 'User',
+      entityId: event.userId,
+      metadata: { method: event.method },
       ipAddress: event.context.ipAddress,
       userAgent: event.context.userAgent,
     });

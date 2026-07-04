@@ -49,7 +49,20 @@ export class SessionsService {
     currentSessionId: string,
     context: RequestContext,
   ): Promise<number> {
-    const revokedIds = await this.sessionsRepository.revokeAllExcept(userId, currentSessionId);
+    return this.revokeAll(userId, context, currentSessionId);
+  }
+
+  /** Revokes every active session for the user, e.g. after a password reset. */
+  async revokeAllSessions(userId: string, context: RequestContext): Promise<number> {
+    return this.revokeAll(userId, context);
+  }
+
+  private async revokeAll(
+    userId: string,
+    context: RequestContext,
+    exceptSessionId?: string,
+  ): Promise<number> {
+    const revokedIds = await this.sessionsRepository.revokeAllExcept(userId, exceptSessionId);
 
     const accessTtl = this.tokenService.getAccessTokenTtlMs();
     await Promise.all(
@@ -60,7 +73,7 @@ export class SessionsService {
 
     this.eventEmitter.emit(
       ALL_SESSIONS_REVOKED,
-      new AllSessionsRevokedEvent(userId, revokedIds.length, currentSessionId, context),
+      new AllSessionsRevokedEvent(userId, revokedIds.length, exceptSessionId ?? null, context),
     );
 
     return revokedIds.length;

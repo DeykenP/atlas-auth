@@ -34,10 +34,14 @@ export class SessionsRepository {
     ]);
   }
 
-  /** Revokes every active session for the user except the one to keep. */
-  async revokeAllExcept(userId: string, keptSessionId: string): Promise<string[]> {
+  /** Revokes every active session for the user, optionally keeping one. */
+  async revokeAllExcept(userId: string, exceptSessionId?: string): Promise<string[]> {
     const sessions = await this.prisma.session.findMany({
-      where: { userId, isRevoked: false, id: { not: keptSessionId } },
+      where: {
+        userId,
+        isRevoked: false,
+        ...(exceptSessionId ? { id: { not: exceptSessionId } } : {}),
+      },
       select: { id: true },
     });
     const sessionIds = sessions.map((session) => session.id);

@@ -15,7 +15,7 @@ export class AllSessionsRevokedEvent {
   constructor(
     public readonly userId: string,
     public readonly revokedCount: number,
-    public readonly keptSessionId: string,
+    public readonly keptSessionId: string | null,
     public readonly context: RequestContext,
   ) {}
 }
