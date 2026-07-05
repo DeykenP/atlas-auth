@@ -309,8 +309,8 @@ sequenceDiagram
     A->>S: refresh(staleToken)
     S->>DB: find by hash → revokedAt is set!
     S->>DB: revoke entire family + revoke session
-    S-->>A: 401 "reuse detected; session revoked"
-    Note over DB: legitimate user's session is now dead too —<br/>they must log in again, but the attacker gained nothing
+    S-->>A: 401 "reuse detected, session revoked"
+    Note over DB: legitimate user's session is now dead too, they must log in again, but the attacker gained nothing
 ```
 
 ### Password reset
