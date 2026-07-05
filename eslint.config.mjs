@@ -36,4 +36,15 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // supertest's response body is untyped `any` by design; asserting on it
+    // in e2e tests is the normal, accepted pattern and not worth annotating.
+    files: ['**/*.spec.ts', '**/*.e2e-spec.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+    },
+  },
 );
