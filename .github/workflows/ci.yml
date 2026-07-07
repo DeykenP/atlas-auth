@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  DATABASE_URL: postgresql://atlas:atlas@localhost:5432/atlas_auth_test?schema=public
+  REDIS_HOST: localhost
+  REDIS_PORT: 6379
+  APP_URL: http://localhost:3000
+  CORS_ORIGINS: http://localhost:3000
+  JWT_ACCESS_SECRET: ci-access-secret-min-32-characters-long-value
+  COOKIE_SECRET: ci-cookie-secret-min-32-characters-long-value
+  MAIL_PROVIDER: smtp
+  MAIL_FROM: "Atlas Auth <no-reply@atlas-auth.dev>"
+  SMTP_HOST: 127.0.0.1
+  SMTP_PORT: 1025
+  SMTP_SECURE: false
+
+jobs:
+  test:
+    name: Lint, build, and test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: atlas
+          POSTGRES_PASSWORD: atlas
+          POSTGRES_DB: atlas_auth_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U atlas -d atlas_auth_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npx eslint "src/**/*.ts" "test/**/*.ts"
+
+      - name: Build
+        run: npm run build
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - name: Unit tests
+        run: npm test
+
+      - name: E2E tests
+        run: npm run test:e2e
+
+  docker:
+    name: Verify Docker image builds
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build production image
+        run: docker build --target production -t atlas-auth:ci .
+
+      - name: Build dev image
+        run: docker build --target dev -t atlas-auth:ci-dev .
