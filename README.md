@@ -1,5 +1,7 @@
 # Atlas Auth
 
+[![CI](https://github.com/DeykenP/atlas-auth/actions/workflows/ci.yml/badge.svg)](https://github.com/DeykenP/atlas-auth/actions/workflows/ci.yml)
+
 A production-grade authentication and authorization service built with NestJS, PostgreSQL (Prisma), and Redis. Designed to be integrated into a SaaS product as the identity layer, not as a tutorial project — every feature below is implemented and verified end-to-end against a real database and Redis instance, not mocked.
 
 ## Contents
