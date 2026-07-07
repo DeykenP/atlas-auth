@@ -21,6 +21,7 @@ import { HashingModule } from './common/hashing/hashing.module';
 import { AuditLogModule } from './common/audit-log/audit-log.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { createWinstonOptions } from './common/logger/winston.config';
+import { RedisThrottlerStorage } from './common/redis/redis-throttler-storage.service';
 import { MailModule } from './mail/mail.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
@@ -57,14 +58,15 @@ import { SessionsModule } from './sessions/sessions.module';
     }),
     EventEmitterModule.forRoot(),
     ThrottlerModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
+      inject: [ConfigService, RedisThrottlerStorage],
+      useFactory: (config: ConfigService, storage: RedisThrottlerStorage) => ({
         throttlers: [
           {
             ttl: config.getOrThrow<number>('security.throttle.ttlSeconds') * 1000,
             limit: config.getOrThrow<number>('security.throttle.limit'),
           },
         ],
+        storage,
       }),
     }),
     DatabaseModule,

@@ -27,3 +27,4 @@ prisma/*.db
 
 # misc
 *.tsbuildinfo
+dump.rdb

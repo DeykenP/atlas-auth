@@ -395,12 +395,10 @@ docker compose -f docker-compose.prod.yml run --rm app npx prisma migrate deploy
 - **The app itself is stateless** and horizontally scalable behind a load balancer — all session/blacklist state lives in Redis, not in-process.
 - **Database**: add read replicas and point read-heavy queries (session listing, role/permission lookups) at them once Postgres CPU becomes the bottleneck; the repository layer is the natural seam for this.
 - **Redis**: run it as a managed/clustered instance in production; it is a hard dependency for login, refresh, and logout (blacklist checks), not just a cache.
-- **Rate limiting storage**: see [Known limitations](#known-limitations) — the throttler currently uses in-memory storage per instance, which needs to move to a shared Redis-backed store before running more than one app replica.
+- **Rate limiting storage**: already Redis-backed (`RedisThrottlerStorage`, `src/common/redis/`), so the limit is shared correctly across every app replica behind a load balancer — no change needed before scaling horizontally on this front.
 - **Mail**: sending is synchronous today (fire-and-forget within the request, errors logged not thrown). At high signup volume, move `MailService` calls behind a queue (BullMQ, already Redis-adjacent) so a slow mail provider can't add latency to the request path.
 - **Audit logs**: if `audit_logs`/`login_history` volume grows large, consider partitioning by month or shipping to a dedicated analytics store — they're written via an isolated repository, so swapping the sink doesn't touch `AuthService`.
 
 ## Known limitations
 
-- **Rate-limit storage is in-memory** (`@nestjs/throttler`'s default). This is correct and complete for a single instance, but running multiple replicas behind a load balancer means each instance enforces its own separate limit — effectively multiplying the real limit by the replica count. Before scaling horizontally, swap in a Redis-backed `ThrottlerStorage` implementation.
-- **No CI pipeline is included.** `npm test` and `npm run test:e2e` are ready to be wired into one (GitHub Actions, etc.) — the e2e suite just needs a Postgres + Redis service container.
 - **First-admin bootstrap is a manual step** (`ADMIN_EMAIL` + re-run the seed) by design — there is intentionally no unauthenticated "make me admin" endpoint.
