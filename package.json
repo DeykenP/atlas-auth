@@ -2,7 +2,7 @@
   "name": "atlas-auth",
   "version": "1.0.0",
   "description": "Production-grade authentication & authorization service",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "build": "nest build",
