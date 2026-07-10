@@ -4,7 +4,9 @@ export default registerAs('mail', () => ({
   provider: process.env.MAIL_PROVIDER ?? 'smtp',
   from: process.env.MAIL_FROM,
   smtp: {
-    host: process.env.SMTP_HOST,
+    // Default so the app can boot without any mail config: sends fail
+    // gracefully (logged, never thrown) until a real provider is set.
+    host: process.env.SMTP_HOST ?? 'localhost',
     port: parseInt(process.env.SMTP_PORT ?? '1025', 10),
     user: process.env.SMTP_USER,
     password: process.env.SMTP_PASSWORD,

@@ -1,6 +1,7 @@
 # Atlas Auth
 
 [![CI](https://github.com/DeykenP/atlas-auth/actions/workflows/ci.yml/badge.svg)](https://github.com/DeykenP/atlas-auth/actions/workflows/ci.yml)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/DeykenP/atlas-auth)
 
 A production-grade authentication and authorization service built with NestJS, PostgreSQL (Prisma), and Redis. Designed to be integrated into a SaaS product as the identity layer, not as a tutorial project — every feature below is implemented and verified end-to-end against a real database and Redis instance, not mocked.
 
@@ -154,9 +155,9 @@ Full reference lives in [.env.example](.env.example) with inline comments. Summa
 
 | Group | Key vars | Notes |
 |---|---|---|
-| App | `PORT`, `APP_URL`, `API_PREFIX`, `CORS_ORIGINS` | `APP_URL` is used to build links in emails |
+| App | `PORT`, `APP_URL`, `API_PREFIX`, `CORS_ORIGINS`, `SWAGGER_ENABLED` | `APP_URL` builds links in emails (falls back to `RENDER_EXTERNAL_URL` then `localhost`); Swagger is on outside production, off in production unless `SWAGGER_ENABLED=true` |
 | Database | `DATABASE_URL` | Postgres connection string |
-| Redis | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_TLS` | Sessions blacklist, rate-limit state (see [Known limitations](#known-limitations)) |
+| Redis | `REDIS_URL` **or** `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD`/`REDIS_TLS` | Session blacklist, Redis-backed rate limiting. `REDIS_URL` (e.g. `redis://user:pass@host:6379`) wins if set — the shape most hosting platforms (Render, Railway, Upstash) give you |
 | JWT | `JWT_ACCESS_SECRET`, `JWT_ACCESS_EXPIRES_IN`, `JWT_REFRESH_EXPIRES_IN`, `JWT_ISSUER`, `JWT_AUDIENCE` | Secret must be ≥32 chars |
 | Cookies | `COOKIE_SECRET`, `REFRESH_TOKEN_COOKIE_NAME`, `COOKIE_SECURE` | Set `COOKIE_SECURE=true` in any environment served over HTTPS |
 | Password hashing | `ARGON2_MEMORY_COST`, `ARGON2_TIME_COST`, `ARGON2_PARALLELISM` | Tune for your hardware; defaults follow OWASP guidance |
@@ -351,6 +352,21 @@ The e2e suite needs `DATABASE_URL`/`REDIS_HOST` pointed at a real (can be epheme
 
 ## Deployment
 
+### One-click: Render
+
+The repo ships a [`render.yaml`](render.yaml) blueprint that provisions the app (Docker), a free Postgres, and a free Redis in one click — including auto-generated secrets and migrations applied on boot:
+
+1. Click the **Deploy to Render** button at the top of this README (or go to Render → New → Blueprint and pick this repo)
+2. Approve the plan — that's it. The service comes up at `https://atlas-auth-<id>.onrender.com` with Swagger at `/docs` (`SWAGGER_ENABLED=true` is set in the blueprint since this is a demo deployment)
+
+Free-tier caveats: the instance sleeps after inactivity (first request after idle takes ~30s), and Render's free Postgres expires after 30 days — swap `DATABASE_URL` to a free [Neon](https://neon.tech) database if you want it permanent. No mail provider is configured by default, so registration/verification/reset emails fail silently (logged, not thrown — the API itself still works) until you add `MAIL_PROVIDER`/`RESEND_API_KEY` (or another provider's vars) as an environment variable on the Render service.
+
+To bootstrap an admin on the deployed instance: register via the API, then run the seed from your machine against Render's external database URL (Dashboard → the database → External Database URL):
+
+```bash
+DATABASE_URL="<external-db-url>" ADMIN_EMAIL=you@example.com npx prisma db seed
+```
+
 ### Docker images
 
 The `Dockerfile` has four stages: `deps` (shared install), `dev` (hot-reload, used by `docker-compose.yml`), `build` (compiles + generates the Prisma client + prunes dev dependencies), `production` (non-root user, minimal image, built-in `HEALTHCHECK` hitting `/api/v1/health`).
@@ -366,14 +382,15 @@ docker build --target production -t atlas-auth:latest .
 ```bash
 export POSTGRES_USER=... POSTGRES_PASSWORD=... POSTGRES_DB=... REDIS_PASSWORD=...
 docker compose -f docker-compose.prod.yml up -d
-docker compose -f docker-compose.prod.yml run --rm app npx prisma migrate deploy
 ```
+
+The production image applies pending migrations automatically on boot (`docker/entrypoint.sh` runs `prisma migrate deploy` before starting the app; it's a no-op when the schema is current).
 
 ### Checklist before going live
 
 - [ ] `JWT_ACCESS_SECRET` / `COOKIE_SECRET` are real random 32+ char values, not the `.env.example` placeholders
 - [ ] `COOKIE_SECURE=true` (requires HTTPS in front of the app)
-- [ ] `NODE_ENV=production` (disables Swagger UI, hides internal error messages)
+- [ ] `NODE_ENV=production` (hides internal error messages; also disables Swagger UI unless you explicitly set `SWAGGER_ENABLED=true`)
 - [ ] A real mail provider configured (`MAIL_PROVIDER` ≠ the local SMTP sandbox)
 - [ ] `CORS_ORIGINS` set to your actual frontend origin(s), not `*`
 - [ ] First admin bootstrapped via `ADMIN_EMAIL` (see [Database](#database))

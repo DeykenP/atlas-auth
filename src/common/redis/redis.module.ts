@@ -13,13 +13,16 @@ import { RedisThrottlerStorage } from './redis-throttler-storage.service';
       inject: [ConfigService],
       useFactory: (config: ConfigService): Redis => {
         const logger = new Logger('RedisClient');
-        const client = new Redis({
-          host: config.get<string>('redis.host'),
-          port: config.get<number>('redis.port'),
-          password: config.get<string>('redis.password'),
-          tls: config.get<boolean>('redis.tls') ? {} : undefined,
-          lazyConnect: false,
-        });
+        const url = config.get<string>('redis.url');
+        const client = url
+          ? new Redis(url, { lazyConnect: false })
+          : new Redis({
+              host: config.get<string>('redis.host'),
+              port: config.get<number>('redis.port'),
+              password: config.get<string>('redis.password'),
+              tls: config.get<boolean>('redis.tls') ? {} : undefined,
+              lazyConnect: false,
+            });
         client.on('error', (error) => logger.error(`Redis connection error: ${error.message}`));
         client.on('connect', () => logger.log('Redis connection established'));
         return client;

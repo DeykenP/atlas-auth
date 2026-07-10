@@ -43,7 +43,7 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  if (!config.get<boolean>('app.isProduction')) {
+  if (config.get<boolean>('app.swaggerEnabled')) {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('Atlas Auth API')
       .setDescription('Production-grade authentication & authorization service')

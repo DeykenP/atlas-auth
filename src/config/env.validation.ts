@@ -3,15 +3,26 @@ import * as Joi from 'joi';
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
   PORT: Joi.number().port().default(3000),
-  APP_URL: Joi.string().uri().required(),
+  // Optional because hosting platforms (e.g. Render) inject their own external
+  // URL env var, which app.config falls back to. APP_URL wins when set.
+  APP_URL: Joi.string().uri().optional(),
   API_PREFIX: Joi.string().default('api/v1'),
   CORS_ORIGINS: Joi.string().required(),
+  SWAGGER_ENABLED: Joi.boolean().default(false),
 
   DATABASE_URL: Joi.string()
     .uri({ scheme: ['postgresql', 'postgres'] })
     .required(),
 
-  REDIS_HOST: Joi.string().required(),
+  // Either REDIS_URL alone, or REDIS_HOST (+ optional port/password/tls).
+  REDIS_URL: Joi.string()
+    .uri({ scheme: ['redis', 'rediss'] })
+    .optional(),
+  REDIS_HOST: Joi.string().when('REDIS_URL', {
+    is: Joi.exist(),
+    then: Joi.optional(),
+    otherwise: Joi.required(),
+  }),
   REDIS_PORT: Joi.number().port().default(6379),
   REDIS_PASSWORD: Joi.string().allow('').optional(),
   REDIS_TLS: Joi.boolean().default(false),

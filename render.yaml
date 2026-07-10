@@ -1,0 +1,48 @@
+# Render blueprint: one-click deploy of the app + Postgres + Redis.
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: atlas-auth
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Public demo: keep Swagger UI available at /docs even in production.
+      - key: SWAGGER_ENABLED
+        value: "true"
+      - key: COOKIE_SECURE
+        value: "true"
+      # Swagger UI is same-origin, so no cross-origin caller needs to be allowed.
+      # Point this at your frontend origin(s) when you add one.
+      - key: CORS_ORIGINS
+        value: https://example.invalid
+      - key: MAIL_FROM
+        value: "Atlas Auth <no-reply@atlas-auth.dev>"
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: COOKIE_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: atlas-auth-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: atlas-auth-redis
+          property: connectionString
+
+  - type: keyvalue
+    name: atlas-auth-redis
+    plan: free
+    ipAllowList: [] # internal connections only
+
+databases:
+  - name: atlas-auth-db
+    plan: free
+    databaseName: atlas_auth
+    user: atlas
